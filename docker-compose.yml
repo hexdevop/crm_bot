@@ -1,0 +1,67 @@
+services:
+  crm_bot:
+    build: .
+    container_name: crm_bot
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - DB_HOST=crm_db
+      - REDIS_HOST=crm_redis
+    depends_on:
+      crm_db:
+        condition: service_healthy
+      crm_redis:
+        condition: service_healthy
+    networks:
+      - crm_net
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+
+  crm_db:
+    image: mysql:8.0
+    container_name: crm_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+    ports:
+      - "13306:3306"
+    volumes:
+      - crm_db_data:/var/lib/mysql
+    networks:
+      - crm_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  crm_redis:
+    image: redis:7-alpine
+    container_name: crm_redis
+    restart: unless-stopped
+    environment:
+      - REDIS_PASS=${REDIS_PASS:-}
+    command: ["sh", "-c", "exec redis-server ${REDIS_PASS:+--requirepass \"$REDIS_PASS\"}"]
+    ports:
+      - "16379:6379"
+    volumes:
+      - crm_redis_data:/data
+    networks:
+      - crm_net
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ${REDIS_PASS:+-a $REDIS_PASS} ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  crm_net:
+    driver: bridge
+
+volumes:
+  crm_db_data:
+  crm_redis_data:
