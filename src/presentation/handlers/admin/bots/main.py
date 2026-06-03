@@ -76,16 +76,15 @@ async def back_to_server(
     sv_data = ServerCallbackData(
         action="view", id=server.id, client_id=callback_data.client_id
     )
-    password = server.password or "—"
-    extra = server.extra_info or "—"
     await call.message.edit_text(
         text=i18n.get(
             "server-view",
+            name=server.name or "—",
             ip=server.ip,
             port=server.port,
             user=server.user,
-            password=password,
-            extra_info=extra,
+            password=server.password or "—",
+            extra_info=server.extra_info or "—",
             bots_count=len(server.bots),
         ),
         reply_markup=inline.server_view(sv_data),

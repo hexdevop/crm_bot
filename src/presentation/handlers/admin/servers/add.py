@@ -5,7 +5,7 @@ from aiogram_i18n import I18nContext, L
 
 from src.domain.server import Server
 from src.infrastructure.repo.server import ServerRepository
-from src.presentation.keyboards.admin import reply
+from src.presentation.keyboards.admin import inline, reply
 from src.presentation.keyboards.admin.factory import ServerCallbackData
 from src.presentation.states.admin import ServerState
 from src.utils.message import delete_messages
@@ -144,10 +144,11 @@ async def get_name_and_save(
 
     skip_text = i18n.get("skip")
     name = None if message.text == skip_text else message.text.strip() or None
+    client_id = data["client_id"]
 
     server = await server_repo.add(
         Server(
-            client_id=data["client_id"],
+            client_id=client_id,
             ip=data["ip"],
             port=data.get("port", 22),
             user=data.get("user", "root"),
@@ -156,8 +157,11 @@ async def get_name_and_save(
             name=name,
         )
     )
-    await message.answer(
-        text=i18n.get("server-added", ip=server.ip),
-        reply_markup=reply.main_admin(i18n),
-    )
     await state.clear()
+
+    servers = await server_repo.get_by_client(client_id, page=1)
+    count = await server_repo.count_by_client(client_id)
+    await message.answer(
+        text=i18n.get("server-added", ip=server.ip) + "\n\n" + i18n.get("servers-list" if count > 0 else "servers-empty"),
+        reply_markup=inline.servers_list(servers, count, client_id, page=1),
+    )

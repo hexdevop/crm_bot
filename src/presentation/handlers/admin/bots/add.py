@@ -192,10 +192,13 @@ async def get_comment_and_save(
 
     bot_type = data.get("bot_type", BotType.BOT)
 
+    server_id = data["server_id"]
+    client_id = data.get("client_id", 0)
+
     if bot_type == BotType.BOT:
         tg_bot = await bot_repo.add(
             TgBot(
-                server_id=data["server_id"],
+                server_id=server_id,
                 bot_type=BotType.BOT,
                 tg_bot_id=data["tg_bot_id"],
                 name=data["name"],
@@ -206,14 +209,11 @@ async def get_comment_and_save(
                 comment=comment,
             )
         )
-        await message.answer(
-            text=i18n.get("bot-added", username=tg_bot.username or tg_bot.name),
-            reply_markup=reply.main_admin(i18n),
-        )
+        added_text = i18n.get("bot-added", username=tg_bot.username or tg_bot.name)
     else:
         project = await bot_repo.add(
             TgBot(
-                server_id=data["server_id"],
+                server_id=server_id,
                 bot_type=BotType.PROJECT,
                 name=data["name"],
                 link=data.get("link"),
@@ -221,8 +221,13 @@ async def get_comment_and_save(
                 comment=comment,
             )
         )
-        await message.answer(
-            text=i18n.get("project-added", name=project.name),
-            reply_markup=reply.main_admin(i18n),
-        )
+        added_text = i18n.get("project-added", name=project.name)
+
     await state.clear()
+
+    bots = await bot_repo.get_by_server(server_id, page=1)
+    count = await bot_repo.count_by_server(server_id)
+    await message.answer(
+        text=added_text + "\n\n" + i18n.get("bots-list" if count > 0 else "bots-empty"),
+        reply_markup=inline.bots_list(bots, count, server_id, client_id, page=1),
+    )
