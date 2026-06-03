@@ -51,7 +51,19 @@ async def start_edit_bot(
     await call.answer()
 
 
-@router.message(EditBotState.value, F.text, ~L.cancel())
+@router.message(L.cancel(), StateFilter(EditBotState))
+async def cancel_edit_bot(
+    message: types.Message, state: FSMContext, i18n: I18nContext
+):
+    data = await state.get_data()
+    await delete_messages(message, data)
+    await state.clear()
+    await message.answer(
+        text=i18n.get("admin-menu"), reply_markup=reply.main_admin(i18n)
+    )
+
+
+@router.message(EditBotState.value, F.text)
 async def process_bot_edit(
     message: types.Message,
     state: FSMContext,
@@ -124,16 +136,4 @@ async def process_bot_edit(
     await message.answer(
         text=text,
         reply_markup=inline.bot_view(cb, is_bot=(bot_obj.bot_type == BotType.BOT)),
-    )
-
-
-@router.message(L.cancel(), StateFilter(EditBotState))
-async def cancel_edit_bot(
-    message: types.Message, state: FSMContext, i18n: I18nContext
-):
-    data = await state.get_data()
-    await delete_messages(message, data)
-    await state.clear()
-    await message.answer(
-        text=i18n.get("admin-menu"), reply_markup=reply.main_admin(i18n)
     )

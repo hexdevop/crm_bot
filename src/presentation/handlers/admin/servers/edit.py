@@ -54,7 +54,19 @@ async def start_edit_server(
     await call.answer()
 
 
-@router.message(EditServerState.value, F.text, ~L.cancel())
+@router.message(L.cancel(), StateFilter(EditServerState))
+async def cancel_edit_server(
+    message: types.Message, state: FSMContext, i18n: I18nContext
+):
+    data = await state.get_data()
+    await delete_messages(message, data)
+    await state.clear()
+    await message.answer(
+        text=i18n.get("admin-menu"), reply_markup=reply.main_admin(i18n)
+    )
+
+
+@router.message(EditServerState.value, F.text)
 async def process_server_edit(
     message: types.Message,
     state: FSMContext,
@@ -108,15 +120,3 @@ async def process_server_edit(
         )
     except Exception:
         pass
-
-
-@router.message(L.cancel(), StateFilter(EditServerState))
-async def cancel_edit_server(
-    message: types.Message, state: FSMContext, i18n: I18nContext
-):
-    data = await state.get_data()
-    await delete_messages(message, data)
-    await state.clear()
-    await message.answer(
-        text=i18n.get("admin-menu"), reply_markup=reply.main_admin(i18n)
-    )
